@@ -7,9 +7,8 @@
     --text-color: #333333;
     --text-muted: #666666;
     --border-color: #e0e0e0;
-    --completed-bg: #e0e0e0;
+    --completed-bg: #d0d0d0;
     --completed-text: #888888;
-    --urgent-color: #e53e3e;
     --today-bg: #e8f4fd;
     --shadow: 0 1px 3px rgba(0,0,0,0.1);
     --min-font-size: 10px;
@@ -195,20 +194,12 @@ body {
     padding: 8px 10px;
     border-radius: 6px;
     font-size: 0.85rem;
-    border-left: 3px solid;
 }
 
 .task-item.completed {
-    background: var(--completed-bg);
-    color: var(--completed-text);
+    background: var(--completed-bg) !important;
+    color: var(--completed-text) !important;
     text-decoration: line-through;
-    border-left-color: var(--completed-bg) !important;
-}
-
-.task-class {
-    font-size: 0.75rem;
-    opacity: 0.8;
-    margin-bottom: 2px;
 }
 
 .no-tasks {
@@ -226,6 +217,7 @@ body {
     flex-direction: column;
     overflow: hidden;
     position: relative;
+    min-width: 0; /* Important for flex child */
 }
 
 /* Calendar Controls */
@@ -236,6 +228,7 @@ body {
     margin-bottom: 16px;
     flex-wrap: wrap;
     gap: 12px;
+    flex-shrink: 0;
 }
 
 .calendar-nav {
@@ -322,6 +315,7 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-height: 0; /* Important for flex scrolling */
 }
 
 .calendar-header {
@@ -329,6 +323,7 @@ body {
     grid-template-columns: repeat(7, 1fr);
     background: var(--bg-color);
     border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 .cal-header-cell {
@@ -339,18 +334,16 @@ body {
     color: var(--text-muted);
 }
 
-/* Calendar Grid */
+/* Calendar Grid - FIXED */
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     flex: 1;
+    overflow-y: auto;
+    min-height: 0; /* Important for scrolling */
 }
 
-.calendar-grid.week-view {
-    grid-template-columns: repeat(7, 1fr);
-}
-
-/* Calendar Day */
+/* Calendar Day - FIXED */
 .cal-day {
     min-height: 100px;
     border-right: 1px solid var(--border-color);
@@ -359,8 +352,10 @@ body {
     display: flex;
     flex-direction: column;
     background: var(--card-bg);
+    overflow: hidden;
 }
 
+/* Remove right border on last column */
 .cal-day:nth-child(7n) {
     border-right: none;
 }
@@ -394,9 +389,10 @@ body {
     font-weight: 500;
     padding: 4px 8px;
     align-self: flex-end;
+    flex-shrink: 0;
 }
 
-/* Day Assignments */
+/* Day Assignments - FIXED with scrolling */
 .day-assignments {
     flex: 1;
     overflow-y: auto;
@@ -404,9 +400,10 @@ body {
     flex-direction: column;
     gap: 2px;
     margin-top: 4px;
-    padding-right: 2px;
+    min-height: 0;
 }
 
+/* Custom scrollbar for assignments */
 .day-assignments::-webkit-scrollbar {
     width: 4px;
 }
@@ -420,38 +417,35 @@ body {
     border-radius: 2px;
 }
 
+.day-assignments::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+/* Assignment items */
 .cal-assignment {
     padding: 2px 6px;
     border-radius: 3px;
-    font-size: 0.8rem;
+    font-size: 12px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     cursor: default;
     line-height: 1.4;
     flex-shrink: 0;
-    transition: font-size 0.2s;
 }
 
 .cal-assignment.completed {
-    background-color: var(--completed-bg) !important;
-    color: var(--completed-text) !important;
     text-decoration: line-through;
-}
-
-.cal-assignment.urgent:not(.completed) {
-    background-color: var(--urgent-color) !important;
-    color: white !important;
 }
 
 /* Week View */
 .week-view .cal-day {
-    min-height: 400px;
+    min-height: 300px;
 }
 
 .week-view .cal-assignment {
     white-space: normal;
-    font-size: 0.85rem;
+    word-wrap: break-word;
     padding: 4px 8px;
 }
 
@@ -517,6 +511,7 @@ body {
     font-size: 0.8rem;
     color: var(--text-muted);
     margin-top: 12px;
+    flex-shrink: 0;
 }
 
 /* Modal */
@@ -544,6 +539,8 @@ body {
     max-width: 400px;
     max-height: 90vh;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-header {
@@ -552,6 +549,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-shrink: 0;
 }
 
 .modal-header h2 {
@@ -573,6 +571,7 @@ body {
 
 .modal-body {
     padding: 20px;
+    overflow-y: auto;
 }
 
 .setting-group {
