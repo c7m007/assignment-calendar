@@ -9,10 +9,12 @@ let currentView = 'month';
 let refreshInterval = null;
 let settings = {
     minFontSize: 10,
+    defaultFontSize: 12,
     defaultView: 'month',
     refreshInterval: 5,
     themeColor: '#2c5282',
-    darkMode: false
+    darkMode: false,
+    weekStartsOn: 0  // 0 = Sunday, 1 = Monday
 };
 
 // ============================================
@@ -77,16 +79,25 @@ function parseCSV(csvText) {
 
 async function loadClasses() {
     try {
-        const data = await fetchSheetData(CONFIG.CLASSES_TAB, 'B2:D50');
+        // Fetch columns B through E (B=name, E=hex color)
+        const data = await fetchSheetData(CONFIG.CLASSES_TAB, 'B2:E50');
         
         classes = data
-            .filter(row => row[0] && row[0].trim()) // Has a class name
+            .filter(row => {
+                const name = row[CONFIG.CLASS_COLUMNS.NAME]?.trim();
+                const color = row[CONFIG.CLASS_COLUMNS.HEX_COLOR]?.trim();
+                // Only include rows that have a class name AND a valid hex color
+                return name && 
+                       name.length > 0 && 
+                       color &&
+                       color.startsWith('#');
+            })
             .map(row => ({
-                name: row[0]?.trim() || '',
-                fullName: row[1]?.trim() || '',
-                color: row[2]?.trim() || '#888888'
+                name: row[CONFIG.CLASS_COLUMNS.NAME]?.trim() || '',
+                color: row[CONFIG.CLASS_COLUMNS.HEX_COLOR]?.trim() || '#888888'
             }));
         
+        console.log('Loaded classes:', classes);
         return classes;
     } catch (error) {
         console.error('Error loading classes:', error);
@@ -105,15 +116,13 @@ async function loadAssignments() {
                 const dueDate = row[CONFIG.COLUMNS.DUE_DATE]?.trim() || '';
                 const className = row[CONFIG.COLUMNS.CLASS]?.trim() || '';
                 const assignmentName = row[CONFIG.COLUMNS.ASSIGNMENT]?.trim() || '';
-                const daysUntil = row[CONFIG.COLUMNS.DAYS_UNTIL]?.trim() || '';
                 
                 return {
                     status: status,
                     completed: status === CONFIG.STATUS_DONE,
                     dueDate: parseDate(dueDate),
                     className: className,
-                    name: assignmentName,
-                    daysUntil: parseInt(daysUntil) || null
+                    name: assignmentName
                 };
             });
         
@@ -249,9 +258,8 @@ function renderTasks() {
             const color = getClassColor(task.className);
             const textColor = getTextColor(color);
             return `
-                <div class="task-item" style="background-color: ${color}; color: ${textColor}; border-left-color: ${color};">
-                    ${task.className ? `<div class="task-class">${task.className}</div>` : ''}
-                    <div class="task-name">${task.name || 'Untitled'}</div>
+                <div class="task-item" style="background-color: ${color}; color: ${textColor};">
+                    ${task.name || 'Untitled'}
                 </div>
             `;
         }).join('');
@@ -262,8 +270,7 @@ function renderTasks() {
     } else {
         completedTasksList.innerHTML = completedTasks.map(task => `
             <div class="task-item completed">
-                ${task.className ? `<div class="task-class">${task.className}</div>` : ''}
-                <div class="task-name">${task.name || 'Untitled'}</div>
+                ${task.name || 'Untitled'}
             </div>
         `).join('');
     }
@@ -279,6 +286,22 @@ function renderCalendar() {
     }
     
     updateCalendarTitle();
+    updateCalendarHeader();
+}
+
+function updateCalendarHeader() {
+    const header = document.getElementById('calendarHeader');
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    // Reorder days based on week start setting
+    const reorderedDays = [];
+    for (let i = 0; i < 7; i++) {
+        reorderedDays.push(days[(i + settings.weekStartsOn) % 7]);
+    }
+    
+    header.innerHTML = reorderedDays.map(day => 
+        `<div class="cal-header-cell">${day}</div>`
+    ).join('');
 }
 
 function renderMonthView(grid) {
@@ -290,7 +313,10 @@ function renderMonthView(grid) {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
-    const startDayOfWeek = firstDay.getDay();
+    
+    // Adjust start day based on week start setting
+    let startDayOfWeek = firstDay.getDay() - settings.weekStartsOn;
+    if (startDayOfWeek < 0) startDayOfWeek += 7;
     
     const prevMonth = new Date(year, month, 0);
     const daysInPrevMonth = prevMonth.getDate();
@@ -325,8 +351,8 @@ function renderMonthView(grid) {
         html += `
             <div class="cal-day ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}">
                 <div class="day-number">${dayNum}</div>
-                <div class="day-assignments" style="--min-font: ${settings.minFontSize}px;">
-                    ${renderDayAssignments(dayAssignments)}
+                <div class="day-assignments">
+                    ${renderDayAssignments(dayAssignments, false)}
                 </div>
             </div>
         `;
@@ -338,8 +364,11 @@ function renderMonthView(grid) {
 function renderWeekView(grid) {
     grid.classList.add('week-view');
     
+    // Get the start of the week based on setting
     const startOfWeek = new Date(currentDate);
-    startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+    let dayOffset = currentDate.getDay() - settings.weekStartsOn;
+    if (dayOffset < 0) dayOffset += 7;
+    startOfWeek.setDate(currentDate.getDate() - dayOffset);
     startOfWeek.setHours(0, 0, 0, 0);
     
     const today = new Date();
@@ -375,26 +404,32 @@ function getAssignmentsForDate(date) {
     });
 }
 
-function renderDayAssignments(dayAssignments, showClass = false) {
+function renderDayAssignments(dayAssignments, isWeekView = false) {
     if (dayAssignments.length === 0) return '';
     
     // Calculate font size based on number of assignments
     const count = dayAssignments.length;
-    let fontSize = 12;
-    if (count > 4) fontSize = 11;
-    if (count > 6) fontSize = 10;
-    if (count > 8) fontSize = Math.max(settings.minFontSize, 9);
-    if (count > 10) fontSize = settings.minFontSize;
+    let fontSize = settings.defaultFontSize;
+    
+    if (!isWeekView) {
+        // Month view - shrink more aggressively
+        if (count > 3) fontSize = settings.defaultFontSize - 1;
+        if (count > 5) fontSize = settings.defaultFontSize - 2;
+        if (count > 7) fontSize = Math.max(settings.minFontSize, settings.defaultFontSize - 3);
+        if (count > 9) fontSize = settings.minFontSize;
+    }
     
     return dayAssignments.map(a => {
         const color = getClassColor(a.className);
         const textColor = getTextColor(color);
-        const isUrgent = a.daysUntil !== null && a.daysUntil <= 2 && !a.completed;
-        const displayText = showClass && a.className ? `${a.className}: ${a.name}` : (a.name || 'Untitled');
+        const displayText = a.name || 'Untitled';
+        
+        // Completed items get grey styling
+        const bgStyle = a.completed ? 'background-color: #d0d0d0; color: #888888;' : `background-color: ${color}; color: ${textColor};`;
         
         return `
-            <div class="cal-assignment ${a.completed ? 'completed' : ''} ${isUrgent ? 'urgent' : ''}"
-                 style="background-color: ${color}; color: ${textColor}; font-size: ${fontSize}px;"
+            <div class="cal-assignment ${a.completed ? 'completed' : ''}"
+                 style="${bgStyle} font-size: ${fontSize}px;"
                  title="${a.className}: ${a.name}">
                 ${displayText}
             </div>
@@ -411,8 +446,12 @@ function updateCalendarTitle() {
             year: 'numeric' 
         });
     } else {
+        // Get the start of the week based on setting
         const startOfWeek = new Date(currentDate);
-        startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+        let dayOffset = currentDate.getDay() - settings.weekStartsOn;
+        if (dayOffset < 0) dayOffset += 7;
+        startOfWeek.setDate(currentDate.getDate() - dayOffset);
+        
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         
@@ -487,10 +526,12 @@ function loadSettings() {
 
 function saveSettings() {
     settings.minFontSize = parseInt(document.getElementById('minFontSize').value) || 10;
+    settings.defaultFontSize = parseInt(document.getElementById('defaultFontSize').value) || 12;
     settings.defaultView = document.getElementById('defaultView').value;
     settings.refreshInterval = parseInt(document.getElementById('refreshInterval').value) || 5;
     settings.themeColor = document.getElementById('themeColor').value;
     settings.darkMode = document.getElementById('darkMode').checked;
+    settings.weekStartsOn = parseInt(document.getElementById('weekStartsOn').value) || 0;
     
     localStorage.setItem('calendarSettings', JSON.stringify(settings));
     
@@ -507,7 +548,7 @@ function saveSettings() {
     // Restart auto-refresh with new interval
     startAutoRefresh();
     
-    // Re-render calendar with new font size
+    // Re-render calendar with new settings
     renderCalendar();
     
     // Close modal
@@ -516,10 +557,12 @@ function saveSettings() {
 
 function openSettings() {
     document.getElementById('minFontSize').value = settings.minFontSize;
+    document.getElementById('defaultFontSize').value = settings.defaultFontSize;
     document.getElementById('defaultView').value = settings.defaultView;
     document.getElementById('refreshInterval').value = settings.refreshInterval;
     document.getElementById('themeColor').value = settings.themeColor;
     document.getElementById('darkMode').checked = settings.darkMode;
+    document.getElementById('weekStartsOn').value = settings.weekStartsOn;
     
     document.getElementById('settingsModal').classList.add('active');
 }
