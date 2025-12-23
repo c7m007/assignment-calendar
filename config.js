@@ -17,11 +17,11 @@ const CONFIG = {
         DAYS_UNTIL: 5   // Column F - Days until due (auto-calculated)
     },
     
-    // Column positions in My Classes
+    // Column positions in My Classes (adjusted based on your screenshot)
+    // Fetching B:E, so B=index 0, C=index 1, D=index 2, E=index 3
     CLASS_COLUMNS: {
-        NAME: 1,        // Column B - Class name
-        FULL_NAME: 2,   // Column C - Full class name
-        HEX_COLOR: 3    // Column D - Hex color code
+        NAME: 0,        // Column B - Class name (index 0 when fetching B:E)
+        HEX_COLOR: 3    // Column E - Hex color code (index 3 when fetching B:E)
     },
     
     // Row where data starts (1-indexed for Sheets API)
