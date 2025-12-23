@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assignment Calendar</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="header-title">Assignment Calendar</h1>
+            <div class="header-controls">
+                <button class="btn-icon" id="refreshBtn" title="Refresh data">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                    </svg>
+                </button>
+                <button class="btn-icon" id="settingsBtn" title="Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Layout -->
+        <div class="main-layout">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <!-- Tasks (No Date) - MOVED ABOVE CLASSES -->
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Tasks (No Due Date)</h3>
+                    <div class="tasks-list" id="tasksList">
+                        <!-- Tasks without dates will appear here -->
+                    </div>
+                </div>
+
+                <!-- Completed Tasks -->
+                <div class="sidebar-section">
+                    <div class="sidebar-title-row">
+                        <h3 class="sidebar-title">Completed Tasks</h3>
+                        <button class="btn-toggle" id="toggleCompleted">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="tasks-list completed-tasks collapsed" id="completedTasksList">
+                        <!-- Completed tasks without dates will appear here -->
+                    </div>
+                </div>
+
+                <!-- Class Legend - MOVED BELOW TASKS -->
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Classes</h3>
+                    <div class="class-legend" id="classLegend">
+                        <!-- Class colors will be loaded here -->
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Calendar -->
+            <main class="calendar-main">
+                <!-- Calendar Controls -->
+                <div class="calendar-controls">
+                    <div class="calendar-nav">
+                        <button class="btn-nav" id="prevBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M15 18l-6-6 6-6"/>
+                            </svg>
+                        </button>
+                        <h2 class="calendar-title" id="calendarTitle">December 2025</h2>
+                        <button class="btn-nav" id="nextBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="view-controls">
+                        <button class="btn-view active" data-view="month">Month</button>
+                        <button class="btn-view" data-view="week">Week</button>
+                        <button class="btn-today" id="todayBtn">Today</button>
+                    </div>
+                </div>
+
+                <!-- Calendar Grid -->
+                <div class="calendar-container">
+                    <div class="calendar-header" id="calendarHeader">
+                        <div class="cal-header-cell">Sun</div>
+                        <div class="cal-header-cell">Mon</div>
+                        <div class="cal-header-cell">Tue</div>
+                        <div class="cal-header-cell">Wed</div>
+                        <div class="cal-header-cell">Thu</div>
+                        <div class="cal-header-cell">Fri</div>
+                        <div class="cal-header-cell">Sat</div>
+                    </div>
+                    <div class="calendar-grid" id="calendarGrid">
+                        <!-- Calendar cells will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Loading Indicator -->
+                <div class="loading-overlay" id="loadingOverlay">
+                    <div class="loading-spinner"></div>
+                    <p>Loading assignments...</p>
+                </div>
+
+                <!-- Error Message -->
+                <div class="error-message" id="errorMessage">
+                    <p>Unable to load data. Please check your connection and try again.</p>
+                    <button class="btn-primary" id="retryBtn">Retry</button>
+                </div>
+
+                <!-- Last Updated -->
+                <div class="last-updated" id="lastUpdated">
+                    Last updated: --
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="modal-close" id="closeSettings">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <label for="defaultFontSize">Default font size (px)</label>
+                    <input type="number" id="defaultFontSize" min="8" max="20" value="12">
+                    <p class="setting-help">Base font size for assignments</p>
+                </div>
+                <div class="setting-group">
+                    <label for="minFontSize">Minimum font size (px)</label>
+                    <input type="number" id="minFontSize" min="6" max="16" value="10">
+                    <p class="setting-help">Smallest size before scrolling kicks in</p>
+                </div>
+                <div class="setting-group">
+                    <label for="weekStartsOn">Week starts on</label>
+                    <select id="weekStartsOn">
+                        <option value="0">Sunday</option>
+                        <option value="1">Monday</option>
+                        <option value="2">Tuesday</option>
+                        <option value="3">Wednesday</option>
+                        <option value="4">Thursday</option>
+                        <option value="5">Friday</option>
+                        <option value="6">Saturday</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="defaultView">Default view</label>
+                    <select id="defaultView">
+                        <option value="month">Month</option>
+                        <option value="week">Week</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="refreshInterval">Auto-refresh interval (minutes)</label>
+                    <select id="refreshInterval">
+                        <option value="1">1 minute</option>
+                        <option value="2">2 minutes</option>
+                        <option value="5" selected>5 minutes</option>
+                        <option value="10">10 minutes</option>
+                        <option value="0">Off</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="themeColor">Theme accent color</label>
+                    <input type="color" id="themeColor" value="#2c5282">
+                </div>
+                <div class="setting-group">
+                    <label>
+                        <input type="checkbox" id="darkMode"> Dark mode
+                    </label>
+                </div>
+                <button class="btn-primary" id="saveSettings">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
